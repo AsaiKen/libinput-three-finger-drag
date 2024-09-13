@@ -12,6 +12,8 @@ pub enum XDoCommand {
     MouseUp,
     MouseDown,
     MoveMouseRelative,
+    AltAndLeft,
+    AltAndRight,
 }
 
 pub struct XDoHandler {
@@ -38,6 +40,12 @@ pub fn start_handler() -> XDoHandler {
                 }
                 XDoCommand::MoveMouseRelative => {
                     xdo.move_mouse_relative(param1, param2).unwrap();
+                }
+                XDoCommand::AltAndLeft => {
+                    xdo.send_keysequence( "Alt+Left", 0).unwrap();
+                }
+                XDoCommand::AltAndRight => {
+                    xdo.send_keysequence( "Alt+Right", 0).unwrap();
                 }
             }
         }
@@ -83,6 +91,14 @@ impl XDoHandler {
     pub fn move_mouse_relative(&mut self, x_val: i32, y_val: i32) {
         self.cancel_timer_if_present();
         self.tx.send((XDoCommand::MoveMouseRelative, x_val, y_val)).unwrap();
+    }
+
+    pub fn key_combo(&mut self, combo: &str) {
+        if combo.eq("Alt+Left") {
+            self.tx.send((XDoCommand::AltAndLeft, 0, 0)).unwrap();
+        } else if combo.eq("Alt+Right") {
+            self.tx.send((XDoCommand::AltAndRight, 0, 0)).unwrap();
+        }
     }
 
     pub fn cancel_timer_if_present(&mut self) {

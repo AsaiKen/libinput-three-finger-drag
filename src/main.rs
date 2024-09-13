@@ -4,19 +4,10 @@ use regex::Regex;
 use std::io::{self, BufRead};
 use std::iter::Iterator;
 use std::process::{Command, Stdio};
-use std::env;
 
 mod xdo_handler;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let acceleration: f32;
-    if args.len() > 1 {
-        acceleration = args[1].parse::<f32>().unwrap_or(1.0);
-    } else {
-        acceleration = 1.0;
-    }
-
     let output = Command::new("stdbuf")
         .arg("-o0")
         .arg("libinput")
@@ -29,16 +20,22 @@ fn main() {
 
     let mut xdo_handler = xdo_handler::start_handler();
 
+    let swipe_acceleration = 3.0;
     let mut xsum: f32 = 0.0;
     let mut ysum: f32 = 0.0;
     let pattern = Regex::new(r"[\s]+|/|\(").unwrap();
 
+    let mut hscrolling = false;
+
     for line in io::BufReader::new(output).lines() {
         let line = line.unwrap();
+        let parts: Vec<&str> = pattern.split(&line).filter(|c| !c.is_empty()).collect();
+        let action = parts[1];
+
         if line.contains("GESTURE_") {
+            hscrolling = false;
+
             // event10  GESTURE_SWIPE_UPDATE +3.769s	4  0.25/ 0.48 ( 0.95/ 1.85 unaccelerated)
-            let parts: Vec<&str> = pattern.split(&line).filter(|c| !c.is_empty()).collect();
-            let action = parts[1];
             let finger = parts[3];
             if finger != "3" && !action.starts_with("GESTURE_HOLD"){
                 xdo_handler.mouse_up(1);
@@ -51,12 +48,13 @@ fn main() {
                     xsum = 0.0;
                     ysum = 0.0;
                     xdo_handler.mouse_down(1);
+                    println!("{}", "Swipe");
                 }
                 "GESTURE_SWIPE_UPDATE" => {
                     let x: f32 = parts[4].parse().unwrap();
                     let y: f32 = parts[5].parse().unwrap();
-                    xsum += x * acceleration;
-                    ysum += y * acceleration;
+                    xsum += x * swipe_acceleration;
+                    ysum += y * swipe_acceleration;
                     if xsum.abs() > 1.0 || ysum.abs() > 1.0 {
                         xdo_handler.move_mouse_relative(xsum as i32, ysum as i32);
                         xsum = 0.0;
@@ -85,8 +83,28 @@ fn main() {
                     xdo_handler.mouse_up(1);
                 }
             }
+        } else if line.contains("POINTER_SCROLL_FINGER") {
+            // 2本指の左右スワイプを処理
+            // event9   POINTER_SCROLL_FINGER   +0.247s	vert 0.00/0.0 horiz -1.97/0.0* (finger)
+            if parts.len() >= 8 {
+                let h_scroll: f32 = parts[7].parse().unwrap_or(0.0);
+                if hscrolling {
+                    // hscrollは1回だけ
+                } else if h_scroll >= 10.0 {
+                    // 右スワイプ（Alt+Right）
+                    println!("{}", "Alt+Left");
+                    xdo_handler.key_combo("Alt+Left");
+                    hscrolling = true;
+                } else if h_scroll <= -10.0 {
+                    // 左スワイプ（Alt+Left）
+                    println!("{}", "Alt+Right");
+                    xdo_handler.key_combo("Alt+Right");
+                    hscrolling = true;
+                }
+            }
         } else {
             xdo_handler.mouse_up(1);
+            hscrolling = false;
         }
     }
 }
