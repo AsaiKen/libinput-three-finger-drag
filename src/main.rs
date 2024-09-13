@@ -90,13 +90,13 @@ fn main() {
                 let h_scroll: f32 = parts[7].parse().unwrap_or(0.0);
                 if hscrolling {
                     // hscrollは1回だけ
-                } else if h_scroll >= 10.0 {
-                    // 右スワイプ（Alt+Right）
+                } else if h_scroll >= 15.0 {
+                    // 右スワイプ（Alt+Left）
                     println!("{}", "Alt+Left");
                     xdo_handler.key_combo("Alt+Left");
                     hscrolling = true;
-                } else if h_scroll <= -10.0 {
-                    // 左スワイプ（Alt+Left）
+                } else if h_scroll <= -15.0 {
+                    // 左スワイプ（Alt+Right）
                     println!("{}", "Alt+Right");
                     xdo_handler.key_combo("Alt+Right");
                     hscrolling = true;
