@@ -91,7 +91,7 @@ fn main() {
                 if hscrolling {
                     // hscrollは1回だけ
                 } else if h_scroll >= 15.0 {
-                    if is_chrome_focused() {
+                    if is_browser() {
                         // 右スワイプ（Alt+Left）
                         println!("{}", "Alt+Left");
                         xdo_handler.key_combo("Alt+Left");
@@ -99,7 +99,7 @@ fn main() {
                     hscrolling = true;
                 } else if h_scroll <= -15.0 {
                     // 左スワイプ（Alt+Right）
-                    if is_chrome_focused() {
+                    if is_browser() {
                         println!("{}", "Alt+Right");
                         xdo_handler.key_combo("Alt+Right");
                     }
@@ -113,7 +113,7 @@ fn main() {
     }
 }
 
-fn is_chrome_focused() -> bool {
+fn is_browser() -> bool {
     // xpropコマンドでアクティブなウィンドウIDを取得
     let output = Command::new("xprop")
         .arg("-root")
@@ -127,6 +127,7 @@ fn is_chrome_focused() -> bool {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let window_id_line = stdout.trim();
+    // println!("{}", window_id_line);
 
     // ウィンドウIDを正規表現で抽出
     let re = Regex::new(r"_NET_ACTIVE_WINDOW\(WINDOW\): window id # (0x[0-9a-fA-F]+)").unwrap();
@@ -152,7 +153,8 @@ fn is_chrome_focused() -> bool {
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {
         if line.starts_with("WM_CLASS(") {
-            if line.contains("google-chrome") || line.contains("Google-chrome") {
+            // println!("{}", line);
+            if line.to_lowercase().contains("google-chrome") || line.contains("firefox") {
                 return true;
             }
         }
