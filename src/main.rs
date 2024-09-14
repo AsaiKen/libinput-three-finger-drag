@@ -91,14 +91,18 @@ fn main() {
                 if hscrolling {
                     // hscrollは1回だけ
                 } else if h_scroll >= 15.0 {
-                    // 右スワイプ（Alt+Left）
-                    println!("{}", "Alt+Left");
-                    xdo_handler.key_combo("Alt+Left");
+                    if is_chrome_focused() {
+                        // 右スワイプ（Alt+Left）
+                        println!("{}", "Alt+Left");
+                        xdo_handler.key_combo("Alt+Left");
+                    }
                     hscrolling = true;
                 } else if h_scroll <= -15.0 {
                     // 左スワイプ（Alt+Right）
-                    println!("{}", "Alt+Right");
-                    xdo_handler.key_combo("Alt+Right");
+                    if is_chrome_focused() {
+                        println!("{}", "Alt+Right");
+                        xdo_handler.key_combo("Alt+Right");
+                    }
                     hscrolling = true;
                 }
             }
@@ -107,4 +111,52 @@ fn main() {
             hscrolling = false;
         }
     }
+}
+
+fn is_chrome_focused() -> bool {
+    // xpropコマンドでアクティブなウィンドウIDを取得
+    let output = Command::new("xprop")
+        .arg("-root")
+        .arg("_NET_ACTIVE_WINDOW")
+        .output()
+        .expect("Failed to execute xprop");
+
+    if !output.status.success() {
+        return false;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let window_id_line = stdout.trim();
+
+    // ウィンドウIDを正規表現で抽出
+    let re = Regex::new(r"_NET_ACTIVE_WINDOW\(WINDOW\): window id # (0x[0-9a-fA-F]+)").unwrap();
+    let caps = re.captures(window_id_line);
+
+    let window_id = if let Some(caps) = caps {
+        caps.get(1).unwrap().as_str()
+    } else {
+        return false;
+    };
+
+    // 取得したウィンドウIDでWM_CLASSを調べる
+    let output = Command::new("xprop")
+        .arg("-id")
+        .arg(window_id)
+        .output()
+        .expect("Failed to execute xprop");
+
+    if !output.status.success() {
+        return false;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if line.starts_with("WM_CLASS(") {
+            if line.contains("google-chrome") || line.contains("Google-chrome") {
+                return true;
+            }
+        }
+    }
+
+    false
 }
