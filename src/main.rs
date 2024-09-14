@@ -25,15 +25,16 @@ fn main() {
     let mut ysum: f32 = 0.0;
     let pattern = Regex::new(r"[\s]+|/|\(").unwrap();
 
-    let mut hscrolling = false;
+    let mut scroll_combo = "";
 
     for line in io::BufReader::new(output).lines() {
         let line = line.unwrap();
+        // println!("{}", line);
         let parts: Vec<&str> = pattern.split(&line).filter(|c| !c.is_empty()).collect();
         let action = parts[1];
 
         if line.contains("GESTURE_") {
-            hscrolling = false;
+            scroll_combo = "";
 
             // event10  GESTURE_SWIPE_UPDATE +3.769s	4  0.25/ 0.48 ( 0.95/ 1.85 unaccelerated)
             let finger = parts[3];
@@ -87,28 +88,27 @@ fn main() {
             // 2本指の左右スワイプを処理
             // event9   POINTER_SCROLL_FINGER   +0.247s	vert 0.00/0.0 horiz -1.97/0.0* (finger)
             if parts.len() >= 8 {
+                let v_scroll: f32 = parts[4].parse().unwrap_or(0.0);
                 let h_scroll: f32 = parts[7].parse().unwrap_or(0.0);
-                if hscrolling {
-                    // hscrollは1回だけ
+                if v_scroll == 0.0 && h_scroll == 0.0 && !scroll_combo.is_empty() {
+                    println!("{}", scroll_combo);
+                    xdo_handler.key_combo(scroll_combo);
+                    scroll_combo = "";
                 } else if h_scroll >= 15.0 {
                     if is_browser() {
                         // 右スワイプ（Alt+Left）
-                        println!("{}", "Alt+Left");
-                        xdo_handler.key_combo("Alt+Left");
+                        scroll_combo = "Alt+Left";
                     }
-                    hscrolling = true;
                 } else if h_scroll <= -15.0 {
                     // 左スワイプ（Alt+Right）
                     if is_browser() {
-                        println!("{}", "Alt+Right");
-                        xdo_handler.key_combo("Alt+Right");
+                        scroll_combo = "Alt+Right";
                     }
-                    hscrolling = true;
                 }
             }
         } else {
             xdo_handler.mouse_up(1);
-            hscrolling = false;
+            scroll_combo = ""
         }
     }
 }
