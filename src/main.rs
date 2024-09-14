@@ -94,12 +94,12 @@ fn main() {
                     println!("{}", scroll_combo);
                     xdo_handler.key_combo(scroll_combo);
                     scroll_combo = "";
-                } else if h_scroll >= 10.0 {
+                } else if h_scroll >= 15.0 {
                     if is_browser() {
                         // 右スワイプ（Alt+Left）
                         scroll_combo = "Alt+Left";
                     }
-                } else if h_scroll <= -10.0 {
+                } else if h_scroll <= -15.0 {
                     // 左スワイプ（Alt+Right）
                     if is_browser() {
                         scroll_combo = "Alt+Right";
