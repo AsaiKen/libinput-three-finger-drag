@@ -154,7 +154,9 @@ fn is_browser() -> bool {
     for line in stdout.lines() {
         if line.starts_with("WM_CLASS(") {
             // println!("{}", line);
-            if line.to_lowercase().contains("google-chrome") || line.contains("firefox") {
+            if line.to_lowercase().contains("google-chrome")
+                || line.to_lowercase().contains("brave-browser")
+                || line.contains("firefox") {
                 return true;
             }
         }
