@@ -25,8 +25,6 @@ fn main() {
     let mut ysum: f32 = 0.0;
     let pattern = Regex::new(r"[\s]+|/|\(").unwrap();
 
-    let mut scroll_combo = "";
-
     for line in io::BufReader::new(output).lines() {
         let line = line.unwrap();
         // println!("{}", line);
@@ -34,8 +32,6 @@ fn main() {
         let action = parts[1];
 
         if line.contains("GESTURE_") {
-            scroll_combo = "";
-
             // event10  GESTURE_SWIPE_UPDATE +3.769s	4  0.25/ 0.48 ( 0.95/ 1.85 unaccelerated)
             let finger = parts[3];
             if finger != "3" && !action.starts_with("GESTURE_HOLD"){
@@ -84,83 +80,8 @@ fn main() {
                     xdo_handler.mouse_up(1);
                 }
             }
-        } else if line.contains("POINTER_SCROLL_FINGER") {
-            // 2本指の左右スワイプを処理
-            // event9   POINTER_SCROLL_FINGER   +0.247s	vert 0.00/0.0 horiz -1.97/0.0* (finger)
-            if parts.len() >= 8 {
-                let v_scroll: f32 = parts[4].parse().unwrap_or(0.0);
-                let h_scroll: f32 = parts[7].parse().unwrap_or(0.0);
-                if v_scroll == 0.0 && h_scroll == 0.0 && !scroll_combo.is_empty() {
-                    println!("{}", scroll_combo);
-                    xdo_handler.key_combo(scroll_combo);
-                    scroll_combo = "";
-                } else if v_scroll == 0.0 && h_scroll >= 10.0 {
-                    // 右スワイプ（Alt+Left）
-                    if is_browser() {
-                        scroll_combo = "Alt+Left";
-                    }
-                } else if v_scroll == 0.0 && h_scroll <= -10.0 {
-                    // 左スワイプ（Alt+Right）
-                    if is_browser() {
-                        scroll_combo = "Alt+Right";
-                    }
-                }
-            }
         } else {
             xdo_handler.mouse_up(1);
-            scroll_combo = ""
         }
     }
-}
-
-fn is_browser() -> bool {
-    // xpropコマンドでアクティブなウィンドウIDを取得
-    let output = Command::new("xprop")
-        .arg("-root")
-        .arg("_NET_ACTIVE_WINDOW")
-        .output()
-        .expect("Failed to execute xprop");
-
-    if !output.status.success() {
-        return false;
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let window_id_line = stdout.trim();
-    // println!("{}", window_id_line);
-
-    // ウィンドウIDを正規表現で抽出
-    let re = Regex::new(r"_NET_ACTIVE_WINDOW\(WINDOW\): window id # (0x[0-9a-fA-F]+)").unwrap();
-    let caps = re.captures(window_id_line);
-
-    let window_id = if let Some(caps) = caps {
-        caps.get(1).unwrap().as_str()
-    } else {
-        return false;
-    };
-
-    // 取得したウィンドウIDでWM_CLASSを調べる
-    let output = Command::new("xprop")
-        .arg("-id")
-        .arg(window_id)
-        .output()
-        .expect("Failed to execute xprop");
-
-    if !output.status.success() {
-        return false;
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    for line in stdout.lines() {
-        if line.starts_with("WM_CLASS(") {
-            // println!("{}", line);
-            if line.to_lowercase().contains("google-chrome")
-                || line.to_lowercase().contains("brave-browser")
-                || line.contains("firefox") {
-                return true;
-            }
-        }
-    }
-
-    false
 }
